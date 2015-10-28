@@ -193,7 +193,6 @@ class Graphics:
 				c = 1*bool(board[i[0]][i[1]])#wether a pice lies there or not
 				self.sprites["mark"][c].position = sf.Vector2(i[0]*128, i[1]*128)
 				window.draw(self.sprites["mark"][c])
-		
 
 def main():
 	#init:
@@ -225,6 +224,7 @@ def main():
 						if 448<=y<576 and 256<=x<768:
 							board[player.promotion[0]][player.promotion[1]] = board[player.promotion[0]][player.promotion[1]][0] + ("queen", "bishop", "tower", "knight")[(x-256)//128]
 							player.promotion = None
+							player.inCheck = isInCheck(board, player)
 					else:
 						x = x//128
 						y = y//128
