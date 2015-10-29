@@ -43,7 +43,7 @@ def GetLegalMoves(board, player, pos = None, offensive=False, doKingCheck=True):
 							out.append((x+i, y+1-2*white))
 					elif offensive:
 						out.append((x+i, y+1-2*white))
-		elif curr == "king":
+		elif curr == "king":# a little redundant amount of checking done here?
 			for cx in (x-1, x, x+1):
 				for cy in (y-1, y, y+1):
 					if cx==x and cy==y: continue
@@ -86,7 +86,7 @@ def GetLegalMoves(board, player, pos = None, offensive=False, doKingCheck=True):
 					dest = board[check[0]][check[1]]
 					if not dest:
 						out.append(check)
-					elif dest:
+					else:
 						if dest[0] != color or offensive:#if enemy:
 							out.append(check)
 						break
@@ -127,14 +127,12 @@ def MakeMove(board, player, start, end):
 	piece = board[start[0]][start[1]]
 	
 	#pawn reaching the end of the board:
-	#if end[1] == 7*(piece[0]=="b") and piece[1:]=="pawn": piece = piece[0] + "queen"
-	if end[1] == 7*(piece[0]=="b") and piece[1:]=="pawn": player.promotion = end
+	if end[1] == 7*(piece[0]=="b") and piece[1:]=="pawn": player.promotion = end#piece = piece[0] + "queen"
 	
 	board[start[0]][start[1]] = None
 	board[end[0]][end[1]] = piece
 	player.WhitesTurn = not player.WhitesTurn
 	player.Selected = None
-	
 	player.inCheck = isInCheck(board, player)
 	player.epoch = time.time()
 	
@@ -142,62 +140,56 @@ def MakeMove(board, player, start, end):
 
 class Graphics:
 	def __init__(self):
-		self.textures = {}
+		self.textures = {}#not really needed...
 		self.sprites = {}
 		for i in ("pawn", "king", "bishop", "knight", "tower", "queen", "back", "play", "mark", "prompt"):
 			self.textures[i] = (sf.Texture.from_file("gfx/w%s.png" % i), sf.Texture.from_file("gfx/b%s.png" % i))
 			self.sprites[i] = (sf.Sprite(self.textures[i][0]), sf.Sprite(self.textures[i][1]))
 		for i in range(2): self.sprites["prompt"][i].position = sf.Vector2(256, 448)
+	def DrawSprite(self, window, sprite, color, position):
+		self.sprites[sprite][color].position = position
+		window.draw(self.sprites[sprite][color])
 	def DrawBoard(self, window, board, player):
 		checkmate = True
 		for x in range(8):
 			for y in range(8):
 				pos = sf.Vector2(x*128, y*128)
 				#tile
-				self.sprites["back"][(x+y)%2].position = pos
-				window.draw(self.sprites["back"][(x+y%2)%2])
+				self.DrawSprite(window, "back", (x+y%2)%2, pos)
 				
 				#piece
 				if board[x][y]:
 					piece = board[x][y][1:]
 					color = (board[x][y][0] == "b")*1
-					self.sprites[piece][color].position = pos
-					window.draw(self.sprites[piece][color])
+					self.DrawSprite(window, piece, color, pos)
 					
 					#playable piece:
 					if (not color and player.WhitesTurn) or (color and not player.WhitesTurn):
 						if GetLegalMoves(board, player, (x, y)):
-							self.sprites["play"][0].position = pos
-							window.draw(self.sprites["play"][0])
+							self.DrawSprite(window, "play", 0, pos)
 							checkmate = False
 						
 						if player.inCheck and piece == "king":
-							self.sprites["mark"][1].position = pos
-							window.draw(self.sprites["mark"][1])
+							self.DrawSprite(window, "mark", 1, pos)
 		if checkmate:
 			if (time.time()-player.epoch) % 2 < 1: window.draw(self.sprites["prompt"][0])
 		elif player.promotion:
 			mx, my = int(sf.Mouse.get_position(window).x*1024/window.size[0]), int(sf.Mouse.get_position(window).y*1024/window.size[1])
 			window.draw(self.sprites["prompt"][1])
 			for i, p in enumerate(("queen", "bishop", "tower", "knight")):
-				self.sprites[p][player.WhitesTurn*1].position = sf.Vector2(256+128*i, 448)
-				window.draw(self.sprites[p][player.WhitesTurn*1])
+				self.DrawSprite(window, p, player.WhitesTurn*1, sf.Vector2(256+128*i, 448))
 				if 256+128*i<=mx<384+128*i and 448<=my<576:
-					self.sprites["play"][0].position = sf.Vector2(256+128*i, 448)
-					window.draw(self.sprites["play"][0])
+					self.DrawSprite(window, "play", 0, sf.Vector2(256+128*i, 448))
+					
 		elif player.Selected:
-			self.sprites["play"][1].position = sf.Vector2(player.Selected[0]*128, player.Selected[1]*128)
-			window.draw(self.sprites["play"][1])
+			self.DrawSprite(window, "play", 0, sf.Vector2(player.Selected[0]*128, player.Selected[1]*128))
 			
 			for i in GetLegalMoves(board, player):
-				c = 1*bool(board[i[0]][i[1]])#wether a pice lies there or not
-				self.sprites["mark"][c].position = sf.Vector2(i[0]*128, i[1]*128)
-				window.draw(self.sprites["mark"][c])
+				self.DrawSprite(window, "mark", 1*bool(board[i[0]][i[1]]), sf.Vector2(i[0]*128, i[1]*128))
 
 def main():
 	#init:
 	window = sf.RenderWindow(sf.VideoMode(1024, 1024), "pbsds' chess")
-	windowSize = (1024, 1024)
 	gfx = Graphics()
 	
 	#make the board:
@@ -207,29 +199,26 @@ def main():
 		WhitesTurn = True
 		Selected = None#(x, y)
 		inCheck = False
-		promotion = None#coordinates of pawn in question
+		promotion = None#coordinates of pawn being promoted
 		epoch = None#used for eye-candy
 	player = player()
 	
 	while window.is_open:
-		#events:
-		for event in window.events:
-			e = type(event)
-			if e is sf.CloseEvent:
+		for event in window.events:#events:
+			if type(event) is sf.CloseEvent:
 				window.close()
-			elif e is sf.MouseButtonEvent:
+			elif type(event) is sf.MouseButtonEvent:
 				if event.pressed:
-					x, y = int(event.position.x*1024/window.size[0]), int(event.position.y*1024/window.size[1])
+					mx, my = int(event.position.x*1024/window.size[0]), int(event.position.y*1024/window.size[1])
 					if player.promotion:
-						if 448<=y<576 and 256<=x<768:
-							board[player.promotion[0]][player.promotion[1]] = board[player.promotion[0]][player.promotion[1]][0] + ("queen", "bishop", "tower", "knight")[(x-256)//128]
+						if 448<=my<576 and 256<=mx<768:
+							board[player.promotion[0]][player.promotion[1]] = board[player.promotion[0]][player.promotion[1]][0] + ("queen", "bishop", "tower", "knight")[(mx-256)//128]
 							player.promotion = None
 							player.inCheck = isInCheck(board, player)
 					else:
-						x = x//128
-						y = y//128
+						x, y = mx//128, my//128
 						if event.button == 0:#left click
-							if board[x][y] and ((board[x][y][0]=="w" and player.WhitesTurn) or (board[x][y][0]=="b" and not player.WhitesTurn)):
+							if board[x][y] and (board[x][y][0]=="w") == player.WhitesTurn:
 								if GetLegalMoves(board, player, (x, y)):
 									player.Selected = None if player.Selected == (x, y) else (x, y)
 							elif (x, y) in GetLegalMoves(board, player):
