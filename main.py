@@ -30,10 +30,10 @@ def GetLegalMoves(board, player, pos = None, offensive=False, doKingCheck=True):
 		enemy = "wb"[white]
 		
 		if curr == "pawn" and 0<y<7:
-			if not board[x][y+1-2*white]:#not blocked
-				out.append((x, y+1-2*white))#step forward
+			if not board[x][y+1-2*white] and not offensive:#not blocked
+				out.append((x, y+1-2*white))#possible to step forward
 				
-				if y==1+5*white and not board[x][y+2-4*white]:#first move gets double
+				if y==1+5*white and not board[x][y+2-4*white]:#a pawn's first move si doubled
 					out.append((x, y+2-4*white))
 			
 			for i in (-1, +1):
